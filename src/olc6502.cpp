@@ -141,9 +141,9 @@ olc6502::olc6502() {
 
 olc6502::~olc6502() {}
 
-uint8_t olc6502::read(uint16_t a) { return bus->read(a, false); }
+uint8_t olc6502::read(uint16_t a) { return bus->cpuRead(a, false); }
 
-void olc6502::write(uint16_t a, uint8_t d) { bus->write(a, d); }
+void olc6502::write(uint16_t a, uint8_t d) { bus->cpuWrite(a, d); }
 
 void olc6502::clock() {
   if (cycles == 0) {
