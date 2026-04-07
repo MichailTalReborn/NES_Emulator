@@ -22,8 +22,6 @@ Cartridge::Cartridge(const std::string &sFileName) {
     // Read file header
     ifs.read((char *)&header, sizeof(sHeader));
 
-    // If a "trainer" exists we just need to read past
-    // it before we get to the good stuff
     if (header.mapper1 & 0x04)
       ifs.seekg(512, std::ios_base::cur);
 
@@ -112,9 +110,7 @@ bool Cartridge::ppuWrite(uint16_t addr, uint8_t data) {
     return false;
 }
 
-// void Cartridge::reset() {
-//  Note: This does not reset the ROM contents,
-//  but does reset the mapper.
-// if (pMapper != nullptr)
-// pMapper->reset();
-//}
+void Cartridge::reset() {
+  if (pMapper != nullptr)
+    pMapper->reset();
+}

@@ -83,17 +83,14 @@ olc2C02::~olc2C02() {
   delete sprPatternTable[1];
 }
 
-olc::Sprite &olc2C02::GetScreen() {
-  // Simply returns the current sprite holding the rendered screen
-  return *sprScreen;
-}
+olc::Sprite &olc2C02::GetScreen() { return *sprScreen; }
 
 olc::Sprite &olc2C02::GetPatternTable(uint8_t i, uint8_t palette) {
+  // Loop through all 16x16 tiles
   for (uint16_t nTileY = 0; nTileY < 16; nTileY++) {
     for (uint16_t nTileX = 0; nTileX < 16; nTileX++) {
       uint16_t nOffset = nTileY * 256 + nTileX * 16;
 
-      // Now loop through 8 rows of 8 pixels
       for (uint16_t row = 0; row < 8; row++) {
         uint8_t tile_lsb = ppuRead(i * 0x1000 + nOffset + row + 0x0000);
         uint8_t tile_msb = ppuRead(i * 0x1000 + nOffset + row + 0x0008);
@@ -110,7 +107,7 @@ olc::Sprite &olc2C02::GetPatternTable(uint8_t i, uint8_t palette) {
                    col), // Because we are using the lsb of the row word first
                          // we are effectively reading the row from right
                          // to left, so we need to draw the row "backwards"
-              nTileY * 8 + row, GetColourFromPaletteRAM(palette, pixel));
+              nTileY * 8 + row, GetColourFromPaletteRam(palette, pixel));
         }
       }
     }
@@ -120,7 +117,7 @@ olc::Sprite &olc2C02::GetPatternTable(uint8_t i, uint8_t palette) {
   return *sprPatternTable[i];
 }
 
-olc::Pixel &olc2C02::GetColourFromPaletteRAM(uint8_t palette, uint8_t pixel) {
+olc::Pixel &olc2C02::GetColourFromPaletteRam(uint8_t palette, uint8_t pixel) {
   return palScreen[ppuRead(0x3F00 + (palette << 2) + pixel) & 0x3F];
 }
 
@@ -345,9 +342,29 @@ void olc2C02::ConnectCartridge(const std::shared_ptr<Cartridge> &cartridge) {
   this->cart = cartridge;
 }
 
+void olc2C02::reset() {
+  fine_x = 0x00;
+  address_latch = 0x00;
+  ppu_data_buffer = 0x00;
+  scanline = 0;
+  cycle = 0;
+  bg_next_tile_id = 0x00;
+  bg_next_tile_attrib = 0x00;
+  bg_next_tile_lsb = 0x00;
+  bg_next_tile_msb = 0x00;
+  bg_shifter_pattern_lo = 0x0000;
+  bg_shifter_pattern_hi = 0x0000;
+  bg_shifter_attrib_lo = 0x0000;
+  bg_shifter_attrib_hi = 0x0000;
+  status.reg = 0x00;
+  mask.reg = 0x00;
+  control.reg = 0x00;
+  vram_addr.reg = 0x0000;
+  tram_addr.reg = 0x0000;
+}
+
 void olc2C02::clock() {
   auto IncrementScrollX = [&]() {
-    // Ony if rendering is enabled
     if (mask.render_background || mask.render_sprites) {
       if (vram_addr.coarse_x == 31) {
         // Leaving nametable so wrap address round
@@ -363,7 +380,6 @@ void olc2C02::clock() {
 
   auto IncrementScrollY = [&]() {
     if (mask.render_background || mask.render_sprites) {
-      // If possible, just increment the fine y offset
       if (vram_addr.fine_y < 7) {
         vram_addr.fine_y++;
       } else {
@@ -372,11 +388,17 @@ void olc2C02::clock() {
 
         // Check if we need to swap vertical nametable targets
         if (vram_addr.coarse_y == 29) {
+          // We do, so reset coarse y offset
           vram_addr.coarse_y = 0;
+          // And flip the target nametable bit
           vram_addr.nametable_y = ~vram_addr.nametable_y;
         } else if (vram_addr.coarse_y == 31) {
+          // In case the pointer is in the attribute memory, we
+          // just wrap around the current nametable
           vram_addr.coarse_y = 0;
         } else {
+          // None of the above boundary/wrapping conditions apply
+          // so just increment the coarse y offset
           vram_addr.coarse_y++;
         }
       }
@@ -392,7 +414,6 @@ void olc2C02::clock() {
   };
 
   auto TransferAddressY = [&]() {
-    // Ony if rendering is enabled
     if (mask.render_background || mask.render_sprites) {
       vram_addr.fine_y = tram_addr.fine_y;
       vram_addr.nametable_y = tram_addr.nametable_y;
@@ -459,7 +480,6 @@ void olc2C02::clock() {
 
     if ((cycle >= 2 && cycle < 258) || (cycle >= 321 && cycle < 338)) {
       UpdateShifters();
-
       switch ((cycle - 1) % 8) {
       case 0:
         LoadBackgroundShifters();
@@ -472,6 +492,7 @@ void olc2C02::clock() {
                                       (vram_addr.nametable_x << 10) |
                                       ((vram_addr.coarse_y >> 2) << 3) |
                                       (vram_addr.coarse_x >> 2));
+
         if (vram_addr.coarse_y & 0x02)
           bg_next_tile_attrib >>= 4;
         if (vram_addr.coarse_x & 0x02)
@@ -512,12 +533,11 @@ void olc2C02::clock() {
     if (scanline == -1 && cycle >= 280 && cycle < 305) {
       TransferAddressY();
     }
-
     if (cycle == 257 && scanline >= 0) {
       std::memset(spriteScanline, 0xFF, 8 * sizeof(sObjectAttributeEntry));
-
       sprite_count = 0;
 
+      // Secondly, clear out any residual information in sprite pattern shifters
       for (uint8_t i = 0; i < 8; i++) {
         sprite_shifter_pattern_lo[i] = 0;
         sprite_shifter_pattern_hi[i] = 0;
@@ -549,16 +569,15 @@ void olc2C02::clock() {
         nOAMEntry++;
       } // End of sprite evaluation for next scanline
 
+      // Set sprite overflow flag
       status.sprite_overflow = (sprite_count > 8);
     }
 
     if (cycle == 340) {
 
       for (uint8_t i = 0; i < sprite_count; i++) {
-
         uint8_t sprite_pattern_bits_lo, sprite_pattern_bits_hi;
         uint16_t sprite_pattern_addr_lo, sprite_pattern_addr_hi;
-
         if (!control.sprite_size) {
           // 8x8 Sprite Mode - The control register determines the pattern table
           if (!(spriteScanline[i].attribute & 0x80)) {
@@ -664,9 +683,8 @@ void olc2C02::clock() {
 
   if (scanline >= 241 && scanline < 261) {
     if (scanline == 241 && cycle == 1) {
-      // Effectively end of frame, so set vertical blank flag
       status.vertical_blank = 1;
-
+      // produce visible artefacts
       if (control.enable_nmi)
         nmi = true;
     }
@@ -674,7 +692,6 @@ void olc2C02::clock() {
 
   uint8_t bg_pixel = 0x00;   // The 2-bit pixel to be rendered
   uint8_t bg_palette = 0x00; // The 3-bit index of the palette the pixel indexes
-
   if (mask.render_background) {
     uint16_t bit_mux = 0x8000 >> fine_x;
 
@@ -690,17 +707,17 @@ void olc2C02::clock() {
     bg_palette = (bg_pal1 << 1) | bg_pal0;
   }
 
-  // Foreground =============================================================
   uint8_t fg_pixel = 0x00;   // The 2-bit pixel to be rendered
   uint8_t fg_palette = 0x00; // The 3-bit index of the palette the pixel indexes
   uint8_t fg_priority = 0x00; // A bit of the sprite attribute indicates if its
                               // more important than the background
   if (mask.render_sprites) {
 
-    bSpriteZerobeingRendered = false;
+    bSpriteZeroBeingRendered = false;
 
     for (uint8_t i = 0; i < sprite_count; i++) {
       if (spriteScanline[i].x == 0) {
+        // Determine the pixel value...
         uint8_t fg_pixel_lo = (sprite_shifter_pattern_lo[i] & 0x80) > 0;
         uint8_t fg_pixel_hi = (sprite_shifter_pattern_hi[i] & 0x80) > 0;
         fg_pixel = (fg_pixel_hi << 1) | fg_pixel_lo;
@@ -711,7 +728,7 @@ void olc2C02::clock() {
         if (fg_pixel != 0) {
           if (i == 0) // Is this sprite zero?
           {
-            bSpriteZerobeingRendered = true;
+            bSpriteZeroBeingRendered = true;
           }
 
           break;
@@ -742,13 +759,8 @@ void olc2C02::clock() {
     }
 
     // Sprite Zero Hit detection
-    if (bSpriteZeroHitPossible && bSpriteZerobeingRendered) {
-      // Sprite zero is a collision between foreground and background
-      // so they must both be enabled
+    if (bSpriteZeroHitPossible && bSpriteZeroBeingRendered) {
       if (mask.render_background & mask.render_sprites) {
-        // The left edge of the screen has specific switches to control
-        // its appearance. This is used to smooth inconsistencies when
-        // scrolling (since sprites x coord must be >= 0)
         if (~(mask.render_background_left | mask.render_sprites_left)) {
           if (cycle >= 9 && cycle < 258) {
             status.sprite_zero_hit = 1;
@@ -763,7 +775,7 @@ void olc2C02::clock() {
   }
 
   sprScreen->SetPixel(cycle - 1, scanline,
-                      GetColourFromPaletteRAM(palette, pixel));
+                      GetColourFromPaletteRam(palette, pixel));
 
   cycle++;
   if (cycle >= 341) {

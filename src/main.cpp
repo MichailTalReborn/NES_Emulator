@@ -1,7 +1,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "bus.h"
+#include "Bus.h"
 #include "olc6502.h"
 
 #define OLC_PGE_APPLICATION
@@ -104,7 +104,7 @@ private:
   bool OnUserCreate() {
     // Load the cartridge
     cart = std::make_shared<Cartridge>(
-        "/home/Nils/Code/NES_Emulator/Super Mario Bros. (World).nes");
+        "/home/Nils/Code/NES_ROMs/Super Mario Bros. (World).nes");
 
     if (!cart->ImageValid())
       return false;
@@ -125,7 +125,7 @@ private:
 
     // Handle input for controller in port #1
     nes.controller[0] = 0x00;
-    nes.controller[0] |= GetKey(olc::Key::X).bHeld ? 0x80 : 0x00; // A Button
+    nes.controller[0] |= GetKey(olc::Key::Y).bHeld ? 0x80 : 0x00; // A Button
     nes.controller[0] |= GetKey(olc::Key::Z).bHeld ? 0x40 : 0x00; // B Button
     nes.controller[0] |= GetKey(olc::Key::A).bHeld ? 0x20 : 0x00; // Select
     nes.controller[0] |= GetKey(olc::Key::S).bHeld ? 0x10 : 0x00; // Start
@@ -158,9 +158,6 @@ private:
         do {
           nes.clock();
         } while (!nes.cpu.complete());
-        // CPU clock runs slower than system clock, so it may be
-        // complete for additional system clock cycles. Drain
-        // those out
         do {
           nes.clock();
         } while (nes.cpu.complete());
@@ -184,8 +181,6 @@ private:
     DrawCpu(516, 2);
     // DrawCode(516, 72, 26);
 
-    // Draw OAM Contents (first 26 out of 64)
-    // ======================================
     for (int i = 0; i < 26; i++) {
       std::string s = hex(i, 2) + ": (" +
                       std::to_string(nes.ppu.pOAM[i * 4 + 3]) + ", " +
@@ -195,25 +190,19 @@ private:
       DrawString(516, 72 + i * 10, s);
     }
 
-    // Draw Palettes & Pattern Tables
-    // ==============================================
     const int nSwatchSize = 6;
     for (int p = 0; p < 8; p++)   // For each palette
       for (int s = 0; s < 4; s++) // For each index
         FillRect(516 + p * (nSwatchSize * 5) + s * nSwatchSize, 340,
                  nSwatchSize, nSwatchSize,
-                 nes.ppu.GetColourFromPaletteRAM(p, s));
+                 nes.ppu.GetColourFromPaletteRam(p, s));
 
-    // Draw selection reticule around selected palette
     DrawRect(516 + nSelectedPalette * (nSwatchSize * 5) - 1, 339,
              (nSwatchSize * 4), nSwatchSize, olc::WHITE);
 
-    // Generate Pattern Tables
     DrawSprite(516, 348, &nes.ppu.GetPatternTable(0, nSelectedPalette));
     DrawSprite(648, 348, &nes.ppu.GetPatternTable(1, nSelectedPalette));
 
-    // Draw rendered output
-    // ========================================================
     DrawSprite(0, 0, &nes.ppu.GetScreen(), 2);
     return true;
   }
