@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <string>
 #include <vector>
 class Bus;
@@ -40,13 +41,19 @@ public:
   uint8_t opcode = 0x00;
   uint8_t cycles = 0; // Number of cycles left for current Instruction
 
-private:
   uint8_t status = 0x00; // Status Register
   uint8_t x = 0x00;      // X Register
   uint8_t a = 0x00;      // Accumulator Register
   uint8_t y = 0x00;      // Y Register
   uint8_t stkp = 0x00;   // Stack Pointer
-  uint16_t pc = 0x00;    // Program Counter
+  uint16_t pc = 0x00;
+
+  bool complete();
+
+  std::map<uint16_t, std::string> disassemble(uint16_t nStart, uint16_t nStop);
+
+private:
+  // Program Counter
 
   // Reference Link :
   // https://github.com/RomarioBispo/NES-emulator/blob/master/reference%20files/6502%20Instruction%20Set.pdf

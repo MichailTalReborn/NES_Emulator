@@ -12,6 +12,8 @@ public:
   Cartridge(const std::string &sFileName);
   ~Cartridge();
 
+  bool ImageValid();
+
   enum MIRROR {
     HORIZONTAL,
     VERTICAL,
@@ -20,6 +22,7 @@ public:
   } mirror = HORIZONTAL;
 
 private:
+  bool bImageValid = false;
   std::vector<uint8_t> vPRGMemory;
   std::vector<uint8_t> vCHRMemory;
 

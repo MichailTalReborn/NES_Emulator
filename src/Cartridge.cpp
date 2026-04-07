@@ -19,6 +19,8 @@ Cartridge::Cartridge(const std::string &sFileName) {
     char unused[5];
   } header;
 
+  bImageValid = false;
+
   std::ifstream ifs;
   ifs.open(sFileName, std::ifstream::binary);
 
@@ -57,12 +59,14 @@ Cartridge::Cartridge(const std::string &sFileName) {
       pMapper = std::make_shared<Mapper_000>(nPRGBanks, nCHRBanks);
       break;
     }
-
+    bImageValid = true;
     ifs.close();
   }
 }
 
 Cartridge::~Cartridge() {}
+
+bool Cartridge::ImageValid() { return bImageValid; }
 
 bool Cartridge::cpuRead(uint16_t addr, uint8_t &data) {
   uint32_t mapped_addr = 0;

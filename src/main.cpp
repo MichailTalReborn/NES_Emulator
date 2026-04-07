@@ -201,7 +201,7 @@ private:
       for (int s = 0; s < 4; s++) // For each index
         FillRect(516 + p * (nSwatchSize * 5) + s * nSwatchSize, 340,
                  nSwatchSize, nSwatchSize,
-                 nes.ppu.GetColourFromPaletteRam(p, s));
+                 nes.ppu.GetColourFromPaletteRAM(p, s));
 
     // Draw selection reticule around selected palette
     DrawRect(516 + nSelectedPalette * (nSwatchSize * 5) - 1, 339,
