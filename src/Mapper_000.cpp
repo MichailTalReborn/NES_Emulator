@@ -15,7 +15,8 @@ bool Mapper_000::cpuMapRead(uint16_t addr, uint32_t &mapped_addr) {
   return false;
 }
 
-bool Mapper_000::cpuMapWrite(uint16_t addr, uint32_t &mapped_addr) {
+bool Mapper_000::cpuMapWrite(uint16_t addr, uint32_t &mapped_addr,
+                             uint8_t data) {
   if (addr >= 0x8000 && addr <= 0xFFFF) {
     mapped_addr = addr & (nPRGBanks > 1 ? 0x7FFF : 0x3FFF);
     return true;

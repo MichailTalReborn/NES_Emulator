@@ -1,17 +1,21 @@
 #pragma once
-
 #include <cstdint>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "Mapper_000.h"
+// #include "Mapper_002.h"
+// #include "Mapper_003.h"
+// #include "Mapper_066.h"
 
 class Cartridge {
 public:
   Cartridge(const std::string &sFileName);
   ~Cartridge();
 
+public:
   bool ImageValid();
 
   enum MIRROR {
@@ -23,21 +27,25 @@ public:
 
 private:
   bool bImageValid = false;
-  std::vector<uint8_t> vPRGMemory;
-  std::vector<uint8_t> vCHRMemory;
 
   uint8_t nMapperID = 0;
   uint8_t nPRGBanks = 0;
   uint8_t nCHRBanks = 0;
 
+  std::vector<uint8_t> vPRGMemory;
+  std::vector<uint8_t> vCHRMemory;
+
   std::shared_ptr<Mapper> pMapper;
 
 public:
-  // Communicate with Main Bus
+  // Communication with Main Bus
   bool cpuRead(uint16_t addr, uint8_t &data);
   bool cpuWrite(uint16_t addr, uint8_t data);
 
-  // Communicate with PPU Bus
+  // Communication with PPU Bus
   bool ppuRead(uint16_t addr, uint8_t &data);
   bool ppuWrite(uint16_t addr, uint8_t data);
+
+  // Permits system rest of mapper to know state
+  void reset();
 };
