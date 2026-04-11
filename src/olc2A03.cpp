@@ -259,11 +259,11 @@ void olc2A03::clock() {
     {
       pulse1_osc.frequency =
           1789773.0 / (16.0 * (double)(pulse1_seq.reload + 1));
-      pulse1_osc.amplitude = (double)(pulse1_env.output - 1) / 16.0;
+      pulse1_osc.amplitude = (double)pulse1_env.output / 16.0;
       pulse1_sample = pulse1_osc.sample(dGlobalTime);
 
       if (pulse1_lc.counter > 0 && pulse1_seq.timer >= 8 &&
-          !pulse1_sweep.mute && pulse1_env.output > 2)
+          !pulse1_sweep.mute && pulse1_env.output > 0)
         pulse1_output += (pulse1_sample - pulse1_output) * 0.5;
       else
         pulse1_output = 0;
@@ -328,11 +328,9 @@ void olc2A03::clock() {
 
 double olc2A03::GetOutputSample() {
   if (bUseRawMode) {
-    return (pulse1_sample - 0.5) * 0.5 + (pulse2_sample - 0.5) * 0.5;
+    return ((pulse1_sample - 0.5) + (pulse2_sample - 0.5)) * 0.5;
   } else {
-    return ((1.0 * pulse1_output) - 0.8) * 0.1 +
-           ((1.0 * pulse2_output) - 0.8) * 0.1 +
-           ((2.0 * (noise_output - 0.5))) * 0.1;
+    return (pulse1_output + pulse2_output) * 0.5 + (noise_output - 0.5) * 0.2;
   }
 }
 

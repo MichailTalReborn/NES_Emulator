@@ -608,10 +608,10 @@ void SOUND::AudioThread() {
       // User Process
       for (unsigned int c = 0; c < m_nChannels; c++) {
         nNewSample =
-            (short)(GetMixerOutput(c, m_fGlobalTime + fTimeStep * (float)n,
-                                   fTimeStep),
-                    1.0) *
-            fMaxSample;
+            (short)(clip(GetMixerOutput(c, m_fGlobalTime + fTimeStep * (float)n,
+                                        fTimeStep),
+                         1.0) *
+                    fMaxSample);
         m_pBlockMemory[n + c] = nNewSample;
         nPreviousSample = nNewSample;
       }
