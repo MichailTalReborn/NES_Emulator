@@ -1,8 +1,14 @@
 #include "Bus.h"
+#include <cstdint>
 
 Bus::Bus() { cpu.ConnectBus(this); }
 
 Bus::~Bus() {}
+
+void Bus::SetSampleFrequency(uint32_t sample_rate) {
+  dAudioTimePerSystemSample = 1.0 / (double)sample_rate;
+  dAudioTimePerNESClock = 1.0 / 5369318.0; // PPU Clock Frequency
+}
 
 void Bus::cpuWrite(uint16_t addr, uint8_t data) {
   if (cart->cpuWrite(addr, data)) {
@@ -25,6 +31,10 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly) {
   if (cart->cpuRead(addr, data)) {
   } else if (addr >= 0x0000 && addr <= 0x1FFF) {
     data = cpuRam[addr & 0x07FF];
+  } else if ((addr >= 0x4000 && addr <= 4013) || addr == 0x4015 ||
+             addr == 4017) {
+    apu.cpuWrite(addr, data);
+
   } else if (addr >= 0x2000 && addr <= 0x3FFF) {
     // PPU Address range, mirrored every 8
     data = ppu.cpuRead(addr & 0x0007, bReadOnly);
@@ -54,8 +64,9 @@ void Bus::reset() {
   dma_transfer = false;
 }
 
-void Bus::clock() {
+bool Bus::clock() {
   ppu.clock();
+  apu.clock();
 
   if (nSystemClockCounter % 3 == 0) {
     if (dma_transfer) {
@@ -80,10 +91,21 @@ void Bus::clock() {
     }
   }
 
+  // Synchronizing with Audio
+  bool bAudioSampleReady = false;
+  dAudioTime += dAudioTimePerNESClock;
+  if (dAudioTime >= dAudioTimePerSystemSample) {
+    dAudioTime -= dAudioTimePerSystemSample;
+    dAudioSample = apu.GetOutputSample();
+    bAudioSampleReady = true;
+  }
+
   if (ppu.nmi) {
     ppu.nmi = false;
     cpu.nmi();
   }
 
   nSystemClockCounter++;
+
+  return bAudioSampleReady;
 }
