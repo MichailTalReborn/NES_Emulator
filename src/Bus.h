@@ -26,17 +26,20 @@ public: // Devices on Main Bus
   // Controllers
   uint8_t controller[2];
 
+  // Synchronisation with system Audio
+public:
+  void SetSampleFrequency(uint32_t sample_rate);
+  double dAudioSample = 0.0;
+
+private:
+  double dAudioTime = 0.0;
+  double dAudioGlobalTime = 0.0;
+  double dAudioTimePerNESClock = 0.0;
+  double dAudioTimePerSystemSample = 0.0f;
+
 public: // Main Bus Read & Write
   void cpuWrite(uint16_t addr, uint8_t data);
   uint8_t cpuRead(uint16_t addr, bool bReadOnly = false);
-
-  double dAudioSample = 0.0;
-  void SetSampleFrequency(uint32_t sample_rate);
-
-private:
-  double dAudioTimePerSystemSample = 0.0f;
-  double dAudioTimePerNESClock = 0.0;
-  double dAudioTime = 0.0;
 
 private:
   // A count of how many clocks have passed
@@ -51,6 +54,7 @@ private:
 
   bool dma_dummy = true;
 
+  // Finally a flag to indicate that a DMA transfer is happening
   bool dma_transfer = false;
 
 public: // System Interface
@@ -58,6 +62,6 @@ public: // System Interface
   void insertCartridge(const std::shared_ptr<Cartridge> &cartridge);
   // Resets the system
   void reset();
-  // Clocks the system - a single whole systme tick
+  // Clocks the system - a single whole system tick
   bool clock();
 };
